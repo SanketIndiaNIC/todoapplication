@@ -1,0 +1,2558 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="_csrf" th:content="${_csrf != null ? _csrf.token : ''}"/>
+    <meta name="_csrf_header" th:content="${_csrf != null ? _csrf.headerName : ''}"/>
+    <meta name="current-username" th:content="${#authentication.principal.username}"/>
+    <title>Todo Application</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <link rel="stylesheet" href="/css/loader.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        :root {
+            --primary-color: #2196F3;
+            --primary-dark: #1976d2;
+            --danger-color: #f44336;
+            --text-color: #333;
+            --text-light: #666;
+            --bg-color: #f5f6fa;
+            --white: #ffffff;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --radius: 10px;
+        }
+
+        body {
+            background: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .navbar {
+            background: var(--white);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            box-shadow: var(--shadow);
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: var(--white);
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: var(--radius);
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        .btn-logout {
+            background: transparent;
+            color: var(--danger-color);
+            border: 1px solid var(--danger-color);
+            padding: 0.8rem 1.5rem;
+            border-radius: var(--radius);
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-logout:hover {
+            background: var(--danger-color);
+            color: var(--white);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            margin-top: 5rem;
+        }
+
+        .main-content {
+            background: var(--white);
+            border-radius: var(--radius);
+            padding: 2rem;
+            box-shadow: var(--shadow);
+            margin-top: 1rem;
+        }
+
+        .todo-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .page-title {
+            color: var(--primary-color);
+            font-size: 2rem;
+            font-weight: 600;
+        }
+
+        .todo-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--white);
+            padding: 1.5rem;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-card i {
+            font-size: 2rem;
+            color: var(--primary-color);
+        }
+
+        .todo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .todo-card {
+            background: var(--white);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            transition: all 0.3s ease;
+            border: 1px solid #eee;
+        }
+
+        .todo-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .todo-card-header {
+            padding: 1rem;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .todo-status {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .todo-status.pending {
+            background: #fff3e0;
+            color: #f57c00;
+        }
+
+        .todo-status.completed {
+            background: #e8f5e9;
+            color: var(--primary-color);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: var(--white);
+            padding: 2rem;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+            margin: 10vh auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-title {
+            color: var(--primary-color);
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: var(--text-light);
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+
+        .close-modal:hover {
+            color: var(--danger-color);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.8rem;
+            border: 2px solid #e0e0e0;
+            border-radius: var(--radius);
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(33, 150, 243, 0.25);
+            outline: none;
+        }
+
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+
+        .toast {
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            border-radius: var(--radius);
+            background: var(--white);
+            box-shadow: var(--shadow);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .toast-success {
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .toast-error {
+            border-left: 4px solid var(--danger-color);
+        }
+
+        .todo-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .action-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0.25rem;
+            margin-left: 0.5rem;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .action-btn:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+
+        .action-btn i {
+            font-size: 1rem;
+        }
+
+        .toggle-btn i {
+            color: var(--primary-color);
+        }
+
+        .edit-btn i {
+            color: var(--text-light);
+        }
+
+        .delete-btn i {
+            color: var(--danger-color);
+        }
+
+        .reminder-btn i {
+            color: var(--text-light);
+        }
+
+        .reminder-btn.has-reminder i {
+            color: var(--primary-color);
+        }
+
+        .reminder-btn.reminder-sent i {
+            color: var(--success-color);
+        }
+
+        .todo-card-body {
+            padding: 1.5rem;
+        }
+
+        .todo-title {
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+            color: var(--text-color);
+        }
+
+        .todo-title.completed {
+            text-decoration: line-through;
+        }
+
+        .todo-timestamps {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            color: var(--text-light);
+            font-size: 0.85rem;
+        }
+
+        .reminder-info {
+            font-size: 0.85rem;
+            color: #666;
+            margin-top: 0.5rem;
+            padding-top: 0.5rem;
+            border-top: 1px solid #eee;
+        }
+
+        .reminder-info i {
+            margin-right: 0.5rem;
+        }
+
+        .btn-secondary {
+            background: #f5f5f5;
+            color: var(--text-color);
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-light);
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            color: #ddd;
+            margin-bottom: 1rem;
+        }
+
+        .logout-btn {
+            background: none;
+            border: none;
+            color: var(--danger-color);
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: background-color 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            background: #ffebee;
+        }
+
+        .welcome-text {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-color);
+            font-weight: 500;
+        }
+
+        .edit-btn {
+            color: #FFA000;
+        }
+        .edit-btn:hover {
+            color: #FF6F00;
+        }
+        .todo-title.editing {
+            display: none;
+        }
+        .edit-form {
+            display: none;
+            margin: 0;
+            padding: 0;
+        }
+        .edit-form.editing {
+            display: block;
+        }
+        .edit-form input {
+            width: 100%;
+            padding: 8px;
+            border: 2px solid #2196f3;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+        .edit-form .edit-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .edit-form button {
+            padding: 4px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        .edit-form .save-btn {
+            background: #4CAF50;
+            color: white;
+        }
+        .edit-form .cancel-btn {
+            background: #9e9e9e;
+            color: white;
+        }
+
+        .reminder-modal .modal-content {
+            border-radius: 12px;
+            border: none;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .reminder-modal .modal-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+            border-radius: 12px 12px 0 0;
+            padding: 1rem 1.5rem;
+        }
+
+        .reminder-modal .modal-title {
+            color: #2196f3;
+            font-weight: 600;
+        }
+
+        .reminder-modal .modal-body {
+            padding: 1.5rem;
+        }
+
+        .reminder-modal .form-label {
+            font-weight: 500;
+            color: #495057;
+            margin-bottom: 0.5rem;
+        }
+
+        .reminder-modal .form-control,
+        .reminder-modal .form-select {
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 0.75rem;
+            transition: all 0.2s;
+        }
+
+        .reminder-modal .form-control:focus,
+        .reminder-modal .form-select:focus {
+            border-color: #2196f3;
+            box-shadow: 0 0 0 0.2rem rgba(33, 150, 243, 0.15);
+        }
+
+        .reminder-modal .modal-footer {
+            background: #f8f9fa;
+            border-top: 1px solid #e9ecef;
+            border-radius: 0 0 12px 12px;
+            padding: 1rem 1.5rem;
+        }
+
+        .reminder-modal .btn {
+            padding: 0.5rem 1.5rem;
+            font-weight: 500;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .reminder-modal .btn-secondary {
+            background: #e9ecef;
+            border: none;
+            color: #495057;
+        }
+
+        .reminder-modal .btn-secondary:hover {
+            background: #dee2e6;
+        }
+
+        .reminder-modal .btn-primary {
+            background: #2196f3;
+            border: none;
+        }
+
+        .reminder-modal .btn-primary:hover {
+            background: #1976d2;
+        }
+
+        .reminder-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            background: #e3f2fd;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+        }
+
+        .reminder-info i {
+            color: #2196f3;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin-top: 5rem;
+            }
+
+            .todo-header {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: stretch;
+            }
+
+            .stat-card {
+                padding: 1rem;
+            }
+
+            .modal-content {
+                width: 95%;
+                margin: 5vh auto;
+            }
+        }
+
+        /* Additional Modal Styles */
+        .modal-body {
+            padding: 1.5rem;
+        }
+
+        .modal-footer {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid #eee;
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+        }
+
+        .form-floating {
+            position: relative;
+        }
+
+        .form-floating > .form-control {
+            height: auto;
+            line-height: 1.5;
+            padding: 1rem 0.75rem;
+        }
+
+        .form-floating > label {
+            position: absolute;
+            top: 0;
+            left: 0;
+            padding: 1rem 0.75rem;
+            pointer-events: none;
+            transform-origin: 0 0;
+            transition: opacity .1s ease-in-out,transform .1s ease-in-out;
+            color: #666;
+        }
+
+        .form-floating > .form-control:focus ~ label,
+        .form-floating > .form-control:not(:placeholder-shown) ~ label {
+            transform: scale(.85) translateY(-0.5rem) translateX(0.15rem);
+            background: white;
+            padding: 0 0.5rem;
+        }
+
+        .form-floating > textarea.form-control {
+            min-height: 120px;
+        }
+
+        .form-check-input {
+            width: 2.5em;
+            height: 1.25em;
+            margin-top: 0.125em;
+            margin-right: 0.5em;
+            background-color: #e9ecef;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='rgba%280, 0, 0, 0.25%29'/%3e%3c/svg%3e");
+            background-position: left center;
+            border-radius: 2em;
+            transition: background-position .15s ease-in-out;
+        }
+
+        .form-check-input:checked {
+            background-color: #2196F3;
+            background-position: right center;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23fff'/%3e%3c/svg%3e");
+        }
+
+        .form-check-label {
+            color: #666;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .btn-secondary {
+            background: #f5f5f5;
+            color: #666;
+            border: 1px solid #ddd;
+        }
+
+        .btn-secondary:hover {
+            background: #e9ecef;
+            transform: translateY(-1px);
+        }
+
+        .btn-primary {
+            background: #2196F3;
+            color: white;
+            border: none;
+        }
+
+        .btn-primary:hover {
+            background: #1976d2;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(33, 150, 243, 0.2);
+        }
+
+        .todo-content {
+            padding: 1rem;
+        }
+
+        .todo-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .todo-description {
+            font-size: 0.9rem;
+            color: var(--text-light);
+            margin-bottom: 1rem;
+            line-height: 1.5;
+            white-space: pre-line;
+        }
+
+        .todo-timestamps {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            font-size: 0.8rem;
+            color: var(--text-light);
+        }
+
+        .edit-btn {
+            color: #2196F3;
+        }
+
+        .edit-btn:hover {
+            color: #1976d2;
+            background-color: rgba(33, 150, 243, 0.1);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .task-tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .tab-btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .tab-btn.active {
+            background: var(--primary-color);
+            color: var(--white);
+        }
+
+        .task-section {
+            display: none;
+        }
+
+        .task-section.active {
+            display: block;
+        }
+
+        .select2-container {
+            width: 100% !important;
+        }
+
+        .select2-container--default .select2-selection--multiple {
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            min-height: 38px;
+        }
+
+        .select2-container--default.select2-container--focus .select2-selection--multiple {
+            border-color: #80bdff;
+            outline: 0;
+            box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+        }
+
+        .select2-container--default .select2-selection--multiple .select2-selection__choice {
+            background-color: #e9ecef;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            padding: 2px 8px;
+            margin: 4px;
+        }
+
+        .collaborative-users {
+            margin-top: 1rem;
+            padding: 0.5rem;
+            background: rgba(33, 150, 243, 0.1);
+            border-radius: 4px;
+        }
+
+        .collaborative-users ul {
+            list-style: none;
+            padding: 0;
+            margin: 0.5rem 0 0 0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .collaborative-users li {
+            background: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            color: var(--text-color);
+        }
+
+        /* Tab styles */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tab-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: #f0f0f0;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .tab-btn.active {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Collaborative task grid */
+        .collaborative-todo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            padding: 20px 0;
+        }
+
+        /* Todo card styles */
+        .todo-card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 15px;
+            transition: transform 0.2s;
+        }
+
+        .todo-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+
+        .todo-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .todo-status {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+        }
+
+        .todo-status.completed {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .todo-status.pending {
+            background-color: #ffc107;
+            color: black;
+        }
+
+        .todo-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .action-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+
+        .action-btn:hover {
+            background-color: #f0f0f0;
+        }
+
+        .todo-content {
+            padding: 10px 0;
+        }
+
+        .todo-title {
+            font-size: 1.2em;
+            margin-bottom: 8px;
+        }
+
+        .todo-description {
+            color: #666;
+            margin-bottom: 12px;
+        }
+
+        .todo-timestamps {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            font-size: 0.85em;
+            color: #888;
+            margin-bottom: 10px;
+        }
+
+        .collaborative-users {
+            border-top: 1px solid #eee;
+            padding-top: 10px;
+            font-size: 0.9em;
+        }
+
+        .collaborators {
+            margin-top: 8px;
+        }
+
+        .collaborators ul {
+            list-style: none;
+            padding-left: 0;
+            margin: 5px 0;
+        }
+
+        .collaborators li {
+            display: inline-block;
+            background-color: #e9ecef;
+            padding: 2px 8px;
+            border-radius: 12px;
+            margin: 2px;
+            font-size: 0.85em;
+        }
+
+        .task-card .edit-task-btn {
+            background: none;
+            border: none;
+            color: var(--primary-color);
+            cursor: pointer;
+            padding: 0.25rem;
+            margin-left: 0.5rem;
+            transition: color 0.3s ease;
+        }
+        
+        .task-card .edit-task-btn:hover {
+            color: var(--primary-dark);
+        }
+        
+        #editCollaborativeTaskModal .modal-content {
+            max-width: 600px;
+        }
+        
+        #editCollaborativeTaskModal .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        /* Select2 Customization */
+        .select2-container {
+            width: 100% !important;
+        }
+        
+        .select2-container--classic .select2-selection--multiple {
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            min-height: 38px;
+        }
+        
+        .select2-container--classic .select2-selection--multiple .select2-selection__choice {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 3px;
+            padding: 2px 8px;
+            margin: 4px;
+        }
+        
+        .select2-container--classic .select2-selection--multiple .select2-selection__choice__remove {
+            color: white;
+            margin-right: 5px;
+        }
+        
+        .select2-container--classic .select2-selection--multiple .select2-selection__choice__remove:hover {
+            color: #fff;
+            opacity: 0.8;
+        }
+        
+        .select2-container--classic .select2-search--inline .select2-search__field {
+            margin-top: 6px;
+        }
+        
+        .select2-container--classic .select2-results__option--highlighted[aria-selected] {
+            background-color: var(--primary-color);
+        }
+        
+        #editCollaborativeTaskModal .modal-content {
+            max-width: 600px;
+            margin: auto;
+        }
+        
+        #editCollaborativeTaskModal .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        #editCollaborativeTaskModal .modal-form {
+            padding: 1.5rem;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: var(--white);
+            padding: 2rem;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+            margin: 10vh auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-title {
+            color: var(--primary-color);
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: var(--text-light);
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+
+        .close-modal:hover {
+            color: var(--danger-color);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.8rem;
+            border: 2px solid #e0e0e0;
+            border-radius: var(--radius);
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(33, 150, 243, 0.25);
+            outline: none;
+        }
+
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+
+        .toast {
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            border-radius: var(--radius);
+            background: var(--white);
+            box-shadow: var(--shadow);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .toast-success {
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .toast-error {
+            border-left: 4px solid var(--danger-color);
+        }
+
+        .todo-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <i class="fas fa-check-double"></i>
+            <span>Todo App</span>
+        </div>
+        <div class="nav-right">
+            <span class="welcome-text">
+                <i class="fas fa-user"></i>
+                <span th:text="${fullName}">User</span>
+            </span>
+            <form th:action="@{/auth/logout}" method="post" style="display: inline;">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                <button type="submit" class="logout-btn">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Logout
+                </button>
+            </form>
+        </div>
+    </nav>
+
+    <div class="container mt-5">
+        <div class="header">
+            <h1>Todo Application</h1>
+            <div class="header-actions">
+                <button onclick="openModal()" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Add Task
+                </button>
+                <button onclick="openCollaborativeModal()" class="btn btn-primary">
+                    <i class="fas fa-users"></i> Add Collaborative Task
+                </button>
+            </div>
+        </div>
+
+        <!-- Statistics Section -->
+        <div class="todo-stats">
+            <div class="stat-card">
+                <i class="fas fa-tasks"></i>
+                <div class="stat-info">
+                    <div class="stat-value total-value">0</div>
+                    <div class="stat-label">Total Tasks</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <i class="fas fa-check-circle"></i>
+                <div class="stat-info">
+                    <div class="stat-value completed-value">0</div>
+                    <div class="stat-label">Completed</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <i class="fas fa-clock"></i>
+                <div class="stat-info">
+                    <div class="stat-value pending-value">0</div>
+                    <div class="stat-label">Pending</div>
+                </div>
+            </div>
+        </div>
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('personal')">Personal Tasks</button>
+            <button class="tab-btn" onclick="switchTab('collaborative')">Collaborative Tasks</button>
+        </div>
+
+        <div id="personalTasks" class="tab-content active">
+            <div class="todo-grid">
+                <div th:each="todo : ${todos}" class="todo-card" th:data-todo-id="${todo.id}">
+                    <div class="todo-card-header">
+                        <span class="todo-status" th:classappend="${todo.completed ? 'completed' : 'pending'}"
+                              th:text="${todo.completed ? 'Completed' : 'Pending'}">Status</span>
+                        <div class="todo-actions">
+                            <button class="action-btn toggle-btn" th:onclick="'toggleTodo(this)'"
+                                    th:data-todo-id="${todo.id}"
+                                    th:title="${todo.completed ? 'Mark as Pending' : 'Mark as Completed'}">
+                                <i class="fas" th:classappend="${todo.completed ? 'fa-times-circle' : 'fa-check-circle'}"></i>
+                            </button>
+                            <button class="action-btn reminder-btn" th:onclick="'setReminder(this)'"
+                                    th:data-todo-id="${todo.id}"
+                                    th:classappend="${todo.reminderDateTime != null ? (todo.reminderSent ? 'reminder-sent' : 'has-reminder') : ''}"
+                                    th:title="${todo.reminderDateTime != null ? (todo.reminderSent ? 'Reminder sent' : 'Reminder set') : 'Set reminder'}">
+                                <i class="fas fa-bell"></i>
+                            </button>
+                            <button class="action-btn edit-btn" th:onclick="'openEditModal(this)'"
+                                    title="Edit Task">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="action-btn delete-btn" th:onclick="'deleteTodo(this)'"
+                                    th:data-todo-id="${todo.id}"
+                                    title="Delete Task">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="todo-content">
+                        <h3 class="todo-title" th:text="${todo.title}">Task Title</h3>
+                        <p class="todo-description" th:text="${todo.description}">Task Description</p>
+                        <div class="todo-timestamps">
+                            <small>Created: <span th:text="${#temporals.format(todo.createdAt, 'dd MMM yyyy HH:mm')}">Date</span></small>
+                            <small th:if="${todo.completed}">Completed: <span th:text="${#temporals.format(todo.completedAt, 'dd MMM yyyy HH:mm')}">Date</span></small>
+                        </div>
+                        <div class="reminder-info" th:if="${todo.reminderDateTime != null}">
+                            <i class="fas" th:classappend="${todo.reminderSent ? 'fa-check-circle text-success' : 'fa-clock text-primary'}"></i>
+                            <span th:if="${!todo.reminderSent}">Reminder set for: </span>
+                            <span th:if="${todo.reminderSent}">Reminder sent on: </span>
+                            <span th:text="${#temporals.format(todo.reminderDateTime, 'dd MMM yyyy HH:mm')}">Date</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="collaborativeTasks" class="tab-content">
+            <div class="collaborative-todo-grid todo-grid">
+                <!-- Collaborative tasks will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Todo Modal -->
+    <div id="addTodoModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">
+                    <i class="fas fa-plus-circle me-2"></i>Add New Task
+                </h2>
+                <button class="close-modal" onclick="closeModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="addTodoForm" onsubmit="addTodo(event)">
+                <div class="modal-body">
+                    <div class="form-floating mb-3">
+                        <input type="text" class="form-control" id="title" name="title" required>
+                        <label for="title">
+                            <i class="fas fa-tasks me-2"></i>Task Title
+                        </label>
+                    </div>
+                    <br>
+                    <div class="form-floating mb-3">
+                        <textarea class="form-control" id="description" name="description" 
+                                style="height: 120px" required></textarea>
+                        <label for="description">
+                            <i class="fas fa-align-left me-2"></i>Task Description
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">
+                        <i class="fas fa-times me-2"></i>Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Add Task
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Todo Modal -->
+    <div id="editTodoModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">
+                    <i class="fas fa-edit me-2"></i>Edit Task
+                </h2>
+                <button class="close-modal" onclick="closeEditModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="editTodoForm" onsubmit="updateTodo(event)">
+                <input type="hidden" id="editTodoId">
+                <div class="modal-body">
+                    <div class="form-floating mb-3">
+                        <input type="text" class="form-control" id="editTitle" name="title" required>
+                        <label for="editTitle">
+                            <i class="fas fa-tasks me-2"></i>Task Title
+                        </label>
+                    </div>
+                    <br>
+                    <div class="form-floating mb-3">
+                        <textarea class="form-control" id="editDescription" name="description" 
+                                style="height: 120px" required></textarea>
+                        <label for="editDescription">
+                            <i class="fas fa-align-left me-2"></i>Task Description
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeEditModal()">
+                        <i class="fas fa-times me-2"></i>Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Collaborative Todo Modal -->
+    <div id="collaborativeTodoModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">
+                    <i class="fas fa-users me-2"></i>Add Collaborative Task
+                </h2>
+                <button class="close-modal" onclick="closeCollaborativeModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="collaborativeTodoForm" onsubmit="addCollaborativeTodo(event)">
+                <div class="modal-body">
+                    <div class="form-floating mb-3">
+                        <input type="text" class="form-control" id="collaborativeTitle" name="title" required>
+                        <label for="collaborativeTitle">
+                            <i class="fas fa-tasks me-2"></i>Task Title
+                        </label>
+                    </div>
+                    <br>
+                    <div class="form-floating mb-3">
+                        <textarea class="form-control" id="collaborativeDescription" name="description" 
+                                style="height: 120px" required></textarea>
+                        <label for="collaborativeDescription">
+                            <i class="fas fa-align-left me-2"></i>Task Description
+                        </label>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="collaborators" class="form-label">
+                            <i class="fas fa-user-plus me-2"></i>Select Collaborators
+                        </label>
+                        <select class="form-select select2-multiple" id="collaborators" name="collaborators[]" multiple="multiple" style="width: 100%">
+                            <!-- Options will be loaded dynamically -->
+                        </select>
+                        <div class="form-text">Select users to collaborate with on this task</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeCollaborativeModal()">
+                        <i class="fas fa-times me-2"></i>Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Create Task
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Collaborative Task Modal -->
+    <div id="editCollaborativeTaskModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">
+                    <i class="fas fa-edit me-2"></i>Edit Collaborative Task
+                </h2>
+                <span class="close">&times;</span>
+            </div>
+            <form id="editCollaborativeTaskForm" class="modal-form">
+                <input type="hidden" id="editTaskId">
+                <div class="form-group">
+                    <label for="editTaskTitle">Title</label>
+                    <input type="text" id="editTaskTitle" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="editTaskDescription">Description</label>
+                    <textarea id="editTaskDescription" class="form-control" rows="3" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="editCollaborators">Collaborators</label>
+                    <select id="editCollaborators" class="form-control select2-multiple" multiple="multiple" required>
+                        <!-- Options will be populated dynamically -->
+                    </select>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="document.getElementById('editCollaborativeTaskModal').style.display='none'">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update Task</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Reminder Modal -->
+    <div class="modal fade reminder-modal" id="reminderModal" tabindex="-1" aria-labelledby="reminderModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="reminderModalLabel">
+                        <i class="fas fa-bell me-2"></i>Set Reminder
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="reminder-info">
+                        <i class="fas fa-info-circle"></i>
+                        <span>Set up reminders to help you stay on track with your tasks.</span>
+                    </div>
+                    <div class="mb-4">
+                        <label for="reminderDateTime" class="form-label">When would you like to be reminded?</label>
+                        <input type="datetime-local" class="form-control" id="reminderDateTime">
+                    </div>
+                    <div class="mb-3">
+                        <label for="reminderFrequency" class="form-label">How often should we remind you?</label>
+                        <select class="form-select" id="reminderFrequency">
+                            <option value="ONCE">Once only</option>
+                            <option value="DAILY">Daily</option>
+                            <option value="WEEKLY">Weekly</option>
+                            <option value="MONTHLY">Monthly</option>
+                            <option value="YEARLY">Yearly</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="saveReminder()">
+                        <i class="fas fa-check me-2"></i>Set Reminder
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.min.js"></script>
+
+    <script th:inline="javascript">
+        const csrfToken = document.querySelector("meta[name='_csrf']").getAttribute("content");
+        const csrfHeader = document.querySelector("meta[name='_csrf_header']").getAttribute("content");
+
+        // Function to handle todo toggle
+        function toggleTodo(element) {
+            const todoId = element.getAttribute('data-todo-id');
+            const todoCard = element.closest('.todo-card');
+            const statusSpan = todoCard.querySelector('.todo-status');
+            const todoTitle = todoCard.querySelector('.todo-title');
+            const toggleButton = todoCard.querySelector('.toggle-btn');
+            const toggleIcon = toggleButton.querySelector('i');
+            const timestampsDiv = todoCard.querySelector('.todo-timestamps');
+
+            fetch(`/todo/${todoId}/toggle`, {
+                method: 'POST',
+                headers: {
+                    [csrfHeader]: csrfToken
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to toggle todo');
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Update status text and classes
+                statusSpan.textContent = data.completed ? 'Completed' : 'Pending';
+                statusSpan.className = `todo-status ${data.completed ? 'completed' : 'pending'}`;
+
+                // Update title style
+                if (data.completed) {
+                    todoTitle.classList.add('completed');
+                } else {
+                    todoTitle.classList.remove('completed');
+                }
+
+                // Update toggle button
+                toggleButton.title = data.completed ? 'Mark as Pending' : 'Mark as Completed';
+                toggleIcon.className = `fas ${data.completed ? 'fa-times-circle' : 'fa-check-circle'}`;
+
+                // Update timestamps
+                let timestampHtml = `<small>Created: ${formatDate(data.createdAt)}</small>`;
+                if (data.completed) {
+                    timestampHtml += `<small>Completed: ${formatDate(data.completedAt)}</small>`;
+                }
+                timestampsDiv.innerHTML = timestampHtml;
+
+                // Update statistics
+                updateStatistics();
+                showToast('Task status updated successfully', 'success');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                // Optionally show an error message to the user
+                alert('Failed to update task status. Please try again.');
+            });
+        }
+
+        // Function to delete todo
+        async function deleteTodo(button) {
+            const todoId = button.getAttribute('data-todo-id');
+            const todoCard = button.closest('.todo-card');
+
+            try {
+                const response = await fetch(`/todo/${todoId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        [csrfHeader]: csrfToken
+                    }
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.text();
+                    throw new Error(errorData || 'Failed to delete task');
+                }
+
+                // Remove the todo card with animation
+                todoCard.style.animation = 'fadeOut 0.3s ease';
+                setTimeout(() => {
+                    todoCard.remove();
+                    updateStatistics();
+                }, 300);
+
+                showToast('Task deleted successfully', 'success');
+            } catch (error) {
+                console.error('Error deleting todo:', error);
+                // Optionally show an error message to the user
+                alert('Failed to delete task. Please try again.');
+            }
+        }
+
+        // Function to add new todo
+        async function addTodo(event) {
+            event.preventDefault();
+            const titleInput = document.getElementById('title');
+            const title = titleInput.value.trim();
+            const descriptionInput = document.getElementById('description');
+            const description = descriptionInput.value.trim();
+
+            if (!title || !description) {
+                console.error('Title and description are required');
+                return;
+            }
+
+            try {
+                const response = await fetch('/todo/add', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        [csrfHeader]: csrfToken
+                    },
+                    body: JSON.stringify({ title, description })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.text();
+                    throw new Error('Failed to add task');
+                }
+
+                const todo = await response.json();
+                
+                // Create new todo card
+                const todoGrid = document.querySelector('.todo-grid');
+                const todoCard = createTodoElement(todo);
+                
+                // Add with animation
+                todoCard.style.opacity = '0';
+                todoGrid.insertBefore(todoCard, todoGrid.firstChild);
+                requestAnimationFrame(() => {
+                    todoCard.style.transition = 'opacity 0.3s ease';
+                    todoCard.style.opacity = '1';
+                });
+
+                // Clear input and close modal
+                titleInput.value = '';
+                descriptionInput.value = '';
+                closeModal();
+
+                // Update statistics
+                updateStatistics();
+                showToast('Task added successfully', 'success');
+            } catch (error) {
+                console.error('Error:', error);
+                // Optionally show an error message to the user
+                alert('Failed to add task. Please try again.');
+            }
+        }
+
+        // Function to create todo card
+        function createTodoElement(todo) {
+            const card = document.createElement('div');
+            card.className = 'todo-card';
+            card.setAttribute('data-todo-id', todo.id);
+
+            card.innerHTML = `
+                <div class="todo-card-header">
+                    <span class="todo-status ${todo.completed ? 'completed' : 'pending'}">
+                        ${todo.completed ? 'Completed' : 'Pending'}
+                    </span>
+                    <div class="todo-actions">
+                        <button class="action-btn toggle-btn" onclick="toggleTodo(this)"
+                                data-todo-id="${todo.id}"
+                                title="${todo.completed ? 'Mark as Pending' : 'Mark as Completed'}">
+                            <i class="fas ${todo.completed ? 'fa-times-circle' : 'fa-check-circle'}"></i>
+                        </button>
+                        <button class="action-btn reminder-btn" onclick="setReminder(this)"
+                                data-todo-id="${todo.id}"
+                                title="Set reminder">
+                            <i class="fas fa-bell"></i>
+                        </button>
+                        <button class="action-btn edit-btn" onclick="openEditModal(this)"
+                                title="Edit Task">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="action-btn delete-btn" onclick="deleteTodo(this)"
+                                data-todo-id="${todo.id}"
+                                title="Delete Task">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="todo-content">
+                    <h3 class="todo-title">${todo.title}</h3>
+                    <p class="todo-description">${todo.description}</p>
+                    <div class="todo-timestamps">
+                        <small>Created: ${formatDate(todo.createdAt)}</small>
+                        ${todo.completedAt ? `<small>Completed: ${formatDate(todo.completedAt)}</small>` : ''}
+                    </div>
+                    ${todo.reminderDateTime ? `
+                        <div class="reminder-info">
+                            <i class="fas fa-bell"></i>
+                            <span>Reminder set for ${formatDate(todo.reminderDateTime)}</span>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+
+            return card;
+        }
+
+        // Function to update statistics
+        function updateStatistics() {
+            const personalTodos = document.querySelectorAll('#personalTasks .todo-card');
+            const collaborativeTodos = document.querySelectorAll('.collaborative-todo-grid .todo-card');
+            const personalCompleted = document.querySelectorAll('#personalTasks .todo-status.completed');
+            const collaborativeCompleted = document.querySelectorAll('.collaborative-todo-grid .todo-status.completed');
+            
+            const totalTodos = personalTodos.length + collaborativeTodos.length;
+            const totalCompleted = personalCompleted.length + collaborativeCompleted.length;
+            
+            document.querySelector('.total-value').textContent = totalTodos;
+            document.querySelector('.completed-value').textContent = totalCompleted;
+            document.querySelector('.pending-value').textContent = totalTodos - totalCompleted;
+        }
+
+        // Function to format date
+        function formatDate(dateString) {
+            const options = { 
+                year: 'numeric', 
+                month: 'short', 
+                day: '2-digit',
+                hour: '2-digit', 
+                minute: '2-digit'
+            };
+            return new Date(dateString).toLocaleDateString('en-US', options);
+        }
+
+        // Modal functions
+        const modal = document.getElementById('addTodoModal');
+
+        function openModal() {
+            modal.style.display = 'block';
+            document.getElementById('title').focus();
+        }
+
+        function closeModal() {
+            modal.style.display = 'none';
+            document.getElementById('title').value = '';
+            document.getElementById('description').value = '';
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+
+        // Close modal with Escape key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape' && modal.style.display === 'block') {
+                closeModal();
+            }
+        });
+
+        // Submit form with Enter key
+        document.getElementById('title').addEventListener('keydown', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                addTodo(event);
+            }
+        });
+
+        // Collaborative Todo Modal functions
+        const collaborativeModal = document.getElementById('collaborativeTodoModal');
+
+        function openCollaborativeModal() {
+            collaborativeModal.style.display = 'block';
+            document.getElementById('collaborativeTitle').focus();
+            loadAvailableUsers();
+        }
+
+        function closeCollaborativeModal() {
+            collaborativeModal.style.display = 'none';
+            document.getElementById('collaborativeTodoForm').reset();
+            $('#collaborators').val(null).trigger('change');
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            if (event.target === collaborativeModal) {
+                closeCollaborativeModal();
+            }
+        }
+
+        // Close modal with Escape key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape' && collaborativeModal.style.display === 'block') {
+                closeCollaborativeModal();
+            }
+        });
+
+        // Submit form with Enter key
+        document.getElementById('collaborativeTitle').addEventListener('keydown', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                addCollaborativeTodo(event);
+            }
+        });
+
+        // Function to add new collaborative todo
+        async function addCollaborativeTodo(event) {
+            event.preventDefault();
+            const title = document.getElementById('collaborativeTitle').value.trim();
+            const description = document.getElementById('collaborativeDescription').value.trim();
+            const collaboratorIds = $('#collaborators').val().map(Number);
+
+            if (!title || !description) {
+                showToast('Please fill in title and description', 'error');
+                return;
+            }
+
+            if (!collaboratorIds || collaboratorIds.length === 0) {
+                showToast('Please select at least one collaborator', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/collaborative-todos', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        [csrfHeader]: csrfToken
+                    },
+                    body: JSON.stringify({
+                        title,
+                        description,
+                        collaboratorIds
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to create collaborative task');
+                }
+
+                const task = await response.json();
+                const container = document.querySelector('.collaborative-todo-grid');
+                container.insertAdjacentHTML('afterbegin', createCollaborativeTodoElement(task));
+                
+                closeCollaborativeModal();
+                showToast('Collaborative task created successfully', 'success');
+                switchTab('collaborative');
+                updateStatistics();
+            } catch (error) {
+                console.error('Error creating collaborative task:', error);
+                showToast('Failed to create collaborative task', 'error');
+            }
+        }
+
+        // Function to create collaborative todo card
+        function createCollaborativeTodoElement(todo) {
+            const currentUsername = document.querySelector('meta[name="current-username"]').content;
+            const isCreator = currentUsername === todo.creator.username;
+            
+            const collaborators = todo.collaborators.map(user => 
+                `<li>${user.username}</li>`
+            ).join('');
+
+            return `
+                <div class="todo-card" data-todo-id="${todo.id}">
+                    <div class="todo-card-header">
+                        <span class="todo-status ${todo.completed ? 'completed' : 'pending'}">
+                            ${todo.completed ? 'Completed' : 'Pending'}
+                        </span>
+                        <div class="todo-actions">
+                            ${isCreator ? `
+                            <button class="action-btn toggle-btn" onclick="toggleCollaborativeTodo(this)"
+                                    data-todo-id="${todo.id}"
+                                    title="${todo.completed ? 'Mark as Pending' : 'Mark as Completed'}">
+                                <i class="fas ${todo.completed ? 'fa-times-circle' : 'fa-check-circle'}"></i>
+                            </button>
+                            <button class="action-btn reminder-btn"
+                                    onclick="setCollaborativeReminder(this)"
+                                    data-todo-id="${todo.id}"
+                                    title="${todo.reminderDateTime != null ? (todo.reminderSent ? 'Reminder sent' : 'Reminder set') : 'Set reminder'}"
+                                    class="${todo.reminderDateTime != null ? (todo.reminderSent ? 'reminder-sent' : 'has-reminder') : ''}">
+                                <i class="fas fa-bell"></i>
+                            </button>
+                                <button class="action-btn edit-btn" onclick="openEditCollaborativeModal(${todo.id})" title="Edit Task">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="action-btn delete-btn" onclick="deleteCollaborativeTodo(${todo.id})" title="Delete Task">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                    <div class="todo-content">
+                        <h3 class="todo-title">${todo.title}</h3>
+                        <p class="todo-description">${todo.description}</p>
+                        <div class="todo-timestamps">
+                            <small>Created: ${formatDate(todo.createdAt)}</small>
+                            ${todo.completedAt ? `<small>Completed: ${formatDate(todo.completedAt)}</small>` : ''}
+                        </div>
+                        <div class="collaborative-users">
+                            <small>Created by: ${todo.creator.username}</small>
+                            <div class="collaborators">
+                                <small>Collaborators:</small>
+                                <ul>${collaborators}</ul>
+                            </div>
+                        </div>
+                        ${todo.reminderDateTime ? `
+                            <div class="reminder-info">
+                                <i class="fas ${todo.reminderSent ? 'fa-check-circle text-success' : 'fa-bell text-primary'}"></i>
+                                <span>${todo.reminderSent ? 'Reminder sent on: ' : 'Reminder set for: '}</span>
+                                <span>${formatDate(todo.reminderDateTime)}</span>
+                                ${todo.reminderMessage ? `<div class="reminder-message"><small>Note: ${todo.reminderMessage}</small></div>` : ''}
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Function to toggle collaborative todo
+        async function toggleCollaborativeTodo(button) {
+            const todoId = button.getAttribute('data-todo-id');
+            
+            try {
+                const response = await fetch(`/api/collaborative-todos/${todoId}/toggle`, {
+                    method: 'POST',
+                    headers: {
+                        [csrfHeader]: csrfToken
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to toggle task status');
+                }
+
+                const updatedTodo = await response.json();
+
+                // Update the task card in the UI
+                const taskCard = button.closest('.todo-card');
+                
+                // Update status display
+                const statusSpan = taskCard.querySelector('.todo-status');
+                statusSpan.textContent = updatedTodo.completed ? 'Completed' : 'Pending';
+                statusSpan.className = `todo-status ${updatedTodo.completed ? 'completed' : 'pending'}`;
+                
+                // Update toggle button
+                button.innerHTML = `<i class="fas ${updatedTodo.completed ? 'fa-times-circle' : 'fa-check-circle'}"></i>`;
+                button.title = updatedTodo.completed ? 'Mark as Pending' : 'Mark as Completed';
+                
+                // Update timestamps
+                const timestampsDiv = taskCard.querySelector('.todo-timestamps');
+                timestampsDiv.innerHTML = `
+                    <small>Created: ${formatDate(updatedTodo.createdAt)}</small>
+                    ${updatedTodo.completedAt ? `<small>Completed: ${formatDate(updatedTodo.completedAt)}</small>` : ''}
+                `;
+                
+                showToast('Task status updated successfully', 'success');
+                updateStatistics();
+            } catch (error) {
+                console.error('Error toggling task:', error);
+                showToast('Failed to update task status', 'error');
+            }
+        }
+
+        // Function to delete collaborative todo
+        async function deleteCollaborativeTodo(id) {
+            try {
+                const response = await fetch(`/api/collaborative-todos/${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        [csrfHeader]: csrfToken
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to delete task');
+                }
+
+                const taskCard = document.querySelector(`.todo-card[data-todo-id="${id}"]`);
+                taskCard.style.animation = 'fadeOut 0.3s ease';
+                setTimeout(() => {
+                    taskCard.remove();
+                    updateStatistics();
+                }, 300);
+
+                showToast('Task deleted successfully', 'success');
+            } catch (error) {
+                console.error('Error deleting task:', error);
+                showToast('Failed to delete task', 'error');
+            }
+        }
+
+        let currentTodoId = null;
+
+        function setReminder(button) {
+            currentTodoId = button.getAttribute('data-todo-id');
+            const reminderModal = document.getElementById('reminderModal');
+            const modal = new bootstrap.Modal(reminderModal);
+            
+            // Set minimum date to current date/time
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            
+            const minDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
+            document.getElementById('reminderDateTime').min = minDateTime;
+            
+            modal.show();
+        }
+
+        function saveReminder() {
+            const reminderDateTime = document.getElementById('reminderDateTime').value;
+            const reminderFrequency = document.getElementById('reminderFrequency').value;
+            
+            if (!reminderDateTime) {
+                showToast('Please select a date and time for the reminder', 'warning');
+                return;
+            }
+
+            const selectedDate = new Date(reminderDateTime);
+            const now = new Date();
+            
+            if (selectedDate <= now) {
+                showToast('Please select a future date and time', 'warning');
+                return;
+            }
+
+            // Check if we're in the collaborative tasks tab
+            const collaborativeTab = document.getElementById('collaborativeTasks');
+            const isCollaborative = collaborativeTab && collaborativeTab.classList.contains('active');
+
+            const endpoint = isCollaborative 
+                ? `/api/collaborative-todos/${currentTodoId}/reminder`
+                : `/todo/${currentTodoId}/reminder`;
+
+            fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    [csrfHeader]: csrfToken
+                },
+                body: JSON.stringify({
+                    reminderDateTime,
+                    reminderFrequency
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to set reminder');
+                }
+                return response.json();
+            })
+            .then(data => {
+                const modal = bootstrap.Modal.getInstance(document.getElementById('reminderModal'));
+                modal.hide();
+                showToast('Reminder set successfully', 'success');
+                
+                // Update the reminder button appearance
+                const todoCard = document.querySelector(`[data-todo-id="${currentTodoId}"]`);
+                if (todoCard) {
+                    const reminderBtn = todoCard.querySelector('.reminder-btn');
+                    if (reminderBtn) {
+                        reminderBtn.classList.add('has-reminder');
+                        reminderBtn.title = 'Reminder set';
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error setting reminder:', error);
+                showToast('Failed to set reminder', 'error');
+            });
+        }
+
+        function showToast(message, type) {
+            const toastContainer = document.getElementById('toast-container') || createToastContainer();
+            const toast = document.createElement('div');
+            toast.className = `toast align-items-center text-white bg-${type} border-0`;
+            toast.setAttribute('role', 'alert');
+            toast.setAttribute('aria-live', 'assertive');
+            toast.setAttribute('aria-atomic', 'true');
+            
+            toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">
+                        ${message}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            `;
+            
+            toastContainer.appendChild(toast);
+            const bsToast = new bootstrap.Toast(toast);
+            bsToast.show();
+            
+            toast.addEventListener('hidden.bs.toast', () => {
+                toast.remove();
+            });
+        }
+
+        function createToastContainer() {
+            const container = document.createElement('div');
+            container.id = 'toast-container';
+            container.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+            container.style.zIndex = '1050';
+            document.body.appendChild(container);
+            return container;
+        }
+
+        // Add these new functions for edit functionality
+        function openEditModal(btn) {
+            const todoCard = btn.closest('.todo-card');
+            const todoId = todoCard.dataset.todoId;
+            const title = todoCard.querySelector('.todo-title').textContent;
+            const description = todoCard.querySelector('.todo-description').textContent;
+            
+            document.getElementById('editTodoId').value = todoId;
+            document.getElementById('editTitle').value = title;
+            document.getElementById('editDescription').value = description;
+            
+            document.getElementById('editTodoModal').style.display = 'block';
+            document.getElementById('editTitle').focus();
+        }
+
+        function closeEditModal() {
+            document.getElementById('editTodoModal').style.display = 'none';
+            document.getElementById('editTodoForm').reset();
+        }
+
+        async function updateTodo(event) {
+            event.preventDefault();
+            const todoId = document.getElementById('editTodoId').value;
+            const title = document.getElementById('editTitle').value.trim();
+            const description = document.getElementById('editDescription').value.trim();
+
+            if (!title || !description) {
+                showToast('Title and description are required', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/todo/${todoId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        [csrfHeader]: csrfToken
+                    },
+                    body: JSON.stringify({ title, description })
+                });
+
+                if (response.ok) {
+                    const updatedTodo = await response.json();
+                    const todoCard = document.querySelector(`.todo-card[data-todo-id="${todoId}"]`);
+                    todoCard.querySelector('.todo-title').textContent = updatedTodo.title;
+                    todoCard.querySelector('.todo-description').textContent = updatedTodo.description;
+                    
+                    closeEditModal();
+                    showToast('Task updated successfully', 'success');
+                    updateStatistics();
+                } else {
+                    showToast('Failed to update task', 'error');
+                }
+            } catch (error) {
+                console.error('Error updating todo:', error);
+                showToast('Failed to update task', 'error');
+            }
+        }
+
+        // Load available users for collaboration
+        async function loadAvailableUsers() {
+            try {
+                const response = await fetch('/api/collaborative-todos/users', {
+                    headers: {
+                        [csrfHeader]: csrfToken
+                    }
+                });
+                
+                if (!response.ok) throw new Error('Failed to load users');
+                
+                const users = await response.json();
+                const select = $('#collaborators');
+                
+                // Clear existing options
+                select.empty();
+                
+                // Add new options
+                users.forEach(user => {
+                    const option = new Option(
+                        `${user.username} (${user.email})`,
+                        user.id.toString(), // Convert ID to string
+                        false,
+                        false
+                    );
+                    select.append(option);
+                });
+                
+                // Trigger change to update Select2
+                select.trigger('change');
+            } catch (error) {
+                console.error('Error loading users:', error);
+                showToast('Failed to load available users', 'error');
+            }
+        }
+
+        // Update openCollaborativeModal function
+        function openCollaborativeModal() {
+            const modal = document.getElementById('collaborativeTodoModal');
+            modal.style.display = 'block';
+            
+            // Reset form and select2
+            $('#collaborativeTodoForm').trigger('reset');
+            $('#collaborators').val(null).trigger('change');
+            
+            // Load available users
+            loadAvailableUsers();
+            
+            // Focus on title
+            document.getElementById('collaborativeTitle').focus();
+        }
+
+        // Update closeCollaborativeModal function
+        function closeCollaborativeModal() {
+            const modal = document.getElementById('collaborativeTodoModal');
+            modal.style.display = 'none';
+            
+            // Reset form and select2
+            $('#collaborativeTodoForm').trigger('reset');
+            $('#collaborators').val(null).trigger('change');
+        }
+
+        // Update addCollaborativeTodo function
+        async function addCollaborativeTodo(event) {
+            event.preventDefault();
+            const title = document.getElementById('collaborativeTitle').value.trim();
+            const description = document.getElementById('collaborativeDescription').value.trim();
+            const collaboratorIds = $('#collaborators').val().map(Number);
+
+            if (!title || !description) {
+                showToast('Please fill in title and description', 'error');
+                return;
+            }
+
+            if (!collaboratorIds || collaboratorIds.length === 0) {
+                showToast('Please select at least one collaborator', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/collaborative-todos', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        [csrfHeader]: csrfToken
+                    },
+                    body: JSON.stringify({
+                        title,
+                        description,
+                        collaboratorIds
+                    })
+                });
+
+                if (!response.ok) {
+                    const error = await response.text();
+                    throw new Error('Failed to create collaborative task');
+                }
+
+                const task = await response.json();
+                const container = document.querySelector('.collaborative-todo-grid');
+                container.insertAdjacentHTML('afterbegin', createCollaborativeTodoElement(task));
+                
+                closeCollaborativeModal();
+                showToast('Collaborative task created successfully', 'success');
+                
+                // Switch to collaborative tab
+                switchTab('collaborative');
+                updateStatistics();
+            } catch (error) {
+                console.error('Error creating collaborative task:', error);
+                showToast(error.message || 'Failed to create collaborative task', 'error');
+            }
+        }
+
+        // Function to load collaborative tasks
+        async function loadCollaborativeTasks() {
+            try {
+                const response = await fetch('/api/collaborative-todos', {
+                    headers: {
+                        [csrfHeader]: csrfToken
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to load collaborative tasks');
+                }
+                
+                const tasks = await response.json();
+                const container = document.querySelector('.collaborative-todo-grid');
+                container.innerHTML = ''; // Clear existing tasks
+                
+                tasks.forEach(task => {
+                    container.insertAdjacentHTML('beforeend', createCollaborativeTodoElement(task));
+                });
+                updateStatistics(); // Update statistics after loading collaborative tasks
+            } catch (error) {
+                console.error('Error loading collaborative tasks:', error);
+                showToast('Failed to load collaborative tasks', 'error');
+            }
+        }
+
+        // Function to switch between personal and collaborative tasks
+        function switchTab(tab) {
+            const personalTasks = document.getElementById('personalTasks');
+            const collaborativeTasks = document.getElementById('collaborativeTasks');
+            const personalTab = document.querySelector('.tab-btn[onclick="switchTab(\'personal\')"]');
+            const collaborativeTab = document.querySelector('.tab-btn[onclick="switchTab(\'collaborative\')"]');
+
+            if (tab === 'personal') {
+                personalTasks.classList.add('active');
+                collaborativeTasks.classList.remove('active');
+                personalTab.classList.add('active');
+                collaborativeTab.classList.remove('active');
+            } else if (tab === 'collaborative') {
+                personalTasks.classList.remove('active');
+                collaborativeTasks.classList.add('active');
+                personalTab.classList.remove('active');
+                collaborativeTab.classList.add('active');
+                loadCollaborativeTasks(); // Load collaborative tasks when switching to collaborative tab
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            loadCollaborativeTasks(); // Load collaborative tasks on page load
+            initializeSelect2();
+        });
+
+        $(document).ready(function() {
+            initializeSelect2();
+        });
+
+        function initializeSelect2() {
+            $('#collaborators').select2({
+                theme: 'classic',
+                placeholder: 'Select collaborators',
+                allowClear: true,
+                width: '100%',
+                dropdownParent: $('#collaborativeTodoModal')
+            });
+        }
+        
+        function openEditCollaborativeModal(id) {
+            const modal = document.getElementById('editCollaborativeTaskModal');
+            modal.style.display = 'block';
+            
+            // Destroy existing Select2 instance if it exists
+            const collaboratorsSelect = $('#editCollaborators');
+            if (collaboratorsSelect.data('select2')) {
+                collaboratorsSelect.select2('destroy');
+            }
+            
+            Promise.all([
+                fetch('/api/collaborative-todos/' + id, {
+                    headers: {
+                        [csrfHeader]: csrfToken
+                    }
+                }),
+                fetch('/api/collaborative-todos/users', {
+                    headers: {
+                        [csrfHeader]: csrfToken
+                    }
+                })
+            ])
+            .then(responses => {
+                if (!responses.every(response => response.ok)) {
+                    throw new Error('Failed to load data');
+                }
+                return Promise.all(responses.map(response => response.json()));
+            })
+            .then(([taskData, users]) => {
+                document.getElementById('editTaskId').value = taskData.id;
+                document.getElementById('editTaskTitle').value = taskData.title;
+                document.getElementById('editTaskDescription').value = taskData.description;
+                
+                // Clear and populate select options
+                collaboratorsSelect.empty();
+                
+                // Add all available users as options
+                users.forEach(user => {
+                    const isSelected = taskData.collaborators.some(c => c.id === user.id);
+                    const option = new Option(user.username, user.id.toString(), isSelected, isSelected);
+                    collaboratorsSelect.append(option);
+                });
+                
+                // Initialize Select2
+                collaboratorsSelect.select2({
+                    width: '100%',
+                    placeholder: 'Select collaborators',
+                    allowClear: true,
+                    dropdownParent: $('#editCollaborativeTaskModal'),
+                    theme: 'classic'
+                });
+                
+                // Trigger change to update Select2 UI
+                collaboratorsSelect.trigger('change');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Failed to load task data', 'error');
+                modal.style.display = 'none';
+            });
+        }
+        
+        // Function to handle collaborative task update
+        async function updateCollaborativeTask(event) {
+            event.preventDefault();
+            
+            const taskId = document.getElementById('editTaskId').value;
+            const title = document.getElementById('editTaskTitle').value;
+            const description = document.getElementById('editTaskDescription').value;
+            const collaboratorIds = $('#editCollaborators').val().map(Number);
+            
+            try {
+                const response = await fetch(`/api/collaborative-todos/${taskId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        [csrfHeader]: csrfToken
+                    },
+                    body: JSON.stringify({
+                        title,
+                        description,
+                        collaboratorIds
+                    })
+                });
+                
+                if (!response.ok) throw new Error('Failed to update task');
+
+                const updatedTask = await response.json();
+
+                // Update the task card in the UI
+                const taskCard = document.querySelector(`[data-task-id="${taskId}"]`);
+                if (taskCard) {
+                    taskCard.querySelector('.task-title').textContent = updatedTask.title;
+                    taskCard.querySelector('.task-description').textContent = updatedTask.description;
+
+                    // Update collaborators
+                    const collaboratorsContainer = taskCard.querySelector('.collaborators');
+                    collaboratorsContainer.innerHTML = '';
+
+                    updatedTask.collaborators.forEach(collaborator => {
+                        const collaboratorSpan = document.createElement('span');
+                        collaboratorSpan.className = 'collaborator';
+                        collaboratorSpan.dataset.userId = collaborator.id;
+                        collaboratorSpan.dataset.username = collaborator.username;
+                        collaboratorSpan.textContent = collaborator.username;
+                        collaboratorsContainer.appendChild(collaboratorSpan);
+                    });
+                }
+
+                // Close modal and cleanup
+                const modal = document.getElementById('editCollaborativeTaskModal');
+                modal.style.display = 'none';
+
+                // Destroy Select2 instance
+                $('#editCollaborators').select2('destroy');
+
+                showToast('Task updated successfully', 'success');
+                updateStatistics();
+            } catch (error) {
+                console.error('Error updating task:', error);
+                showToast('Failed to update task', 'error');
+            }
+        }
+        
+        // Add event listener for the edit form
+        document.getElementById('editCollaborativeTaskForm').addEventListener('submit', updateCollaborativeTask);
+        
+        // Initialize edit modal close button
+        document.querySelector('#editCollaborativeTaskModal .close').addEventListener('click', function() {
+            const modal = document.getElementById('editCollaborativeTaskModal');
+            modal.style.display = 'none';
+            // Destroy Select2 instance
+            $('#editCollaborators').select2('destroy');
+        });
+
+        // Function to set reminder for collaborative task
+        function setCollaborativeReminder(button) {
+            const todoId = button.getAttribute('data-todo-id');
+            currentTodoId = todoId;
+            
+            // Show the reminder modal
+            $('#reminderModal').modal('show');
+            
+            // Update the form submission handler
+            document.getElementById('reminderForm').onsubmit = saveCollaborativeReminder;
+        }
+
+        // Function to save collaborative reminder
+        async function saveCollaborativeReminder(event) {
+            event.preventDefault();
+            
+            const reminderDateTime = document.getElementById('reminderDateTime').value;
+            const reminderMessage = document.getElementById('reminderMessage').value;
+            
+            try {
+                const response = await fetch(`/api/collaborative-todos/${currentTodoId}/reminder`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        [csrfHeader]: csrfToken
+                    },
+                    body: JSON.stringify({
+                        reminderDateTime: reminderDateTime,
+                        reminderMessage: reminderMessage
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to set reminder');
+                }
+                
+                const updatedTodo = await response.json();
+                
+                // Update the UI to show reminder
+                const todoCard = document.querySelector(`[data-todo-id="${currentTodoId}"]`);
+                const reminderDiv = todoCard.querySelector('.reminder-info') || document.createElement('div');
+                reminderDiv.className = 'reminder-info';
+                reminderDiv.innerHTML = `
+                    <i class="fas fa-bell"></i>
+                    <span>Reminder set for ${formatDate(updatedTodo.reminderDateTime)}</span>
+                `;
+                
+                if (!todoCard.querySelector('.reminder-info')) {
+                    todoCard.querySelector('.todo-card-content').appendChild(reminderDiv);
+                }
+                
+                // Close the modal
+                $('#reminderModal').modal('hide');
+                showToast('Reminder set successfully', 'success');
+                
+            } catch (error) {
+                console.error('Error setting reminder:', error);
+                showToast('Failed to set reminder', 'error');
+            }
+        }
+
+        // Function to remove collaborative reminder
+        async function removeCollaborativeReminder(button) {
+            const todoId = button.getAttribute('data-todo-id');
+            
+            try {
+                const response = await fetch(`/api/collaborative-todos/${todoId}/reminder`, {
+                    method: 'DELETE',
+                    headers: {
+                        [csrfHeader]: csrfToken
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to remove reminder');
+                }
+                
+                // Remove reminder info from UI
+                const todoCard = document.querySelector(`[data-todo-id="${todoId}"]`);
+                const reminderInfo = todoCard.querySelector('.reminder-info');
+                if (reminderInfo) {
+                    reminderInfo.remove();
+                }
+                
+                showToast('Reminder removed successfully', 'success');
+                
+            } catch (error) {
+                console.error('Error removing reminder:', error);
+                showToast('Failed to remove reminder', 'error');
+            }
+        }
+    </script>
+    <script src="/js/main.js"></script>
+    <script src="/js/loader.js"></script>
+</body>
+</html>
