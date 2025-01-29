@@ -1778,55 +1778,6 @@
             }
         });
 
-        // Function to add new collaborative todo
-        async function addCollaborativeTodo(event) {
-            event.preventDefault();
-            const title = document.getElementById('collaborativeTitle').value.trim();
-            const description = document.getElementById('collaborativeDescription').value.trim();
-            const collaboratorIds = $('#collaborators').val().map(Number);
-
-            if (!title || !description) {
-                showToast('Please fill in title and description', 'error');
-                return;
-            }
-
-            if (!collaboratorIds || collaboratorIds.length === 0) {
-                showToast('Please select at least one collaborator', 'error');
-                return;
-            }
-
-            try {
-                const response = await fetch('/api/collaborative-todos', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        [csrfHeader]: csrfToken
-                    },
-                    body: JSON.stringify({
-                        title,
-                        description,
-                        collaboratorIds
-                    })
-                });
-
-                if (!response.ok) {
-                    throw new Error('Failed to create collaborative task');
-                }
-
-                const task = await response.json();
-                const container = document.querySelector('.collaborative-todo-grid');
-                container.insertAdjacentHTML('afterbegin', createCollaborativeTodoElement(task));
-                
-                closeCollaborativeModal();
-                showToast('Collaborative task created successfully', 'success');
-                switchTab('collaborative');
-                updateStatistics();
-            } catch (error) {
-                console.error('Error creating collaborative task:', error);
-                showToast('Failed to create collaborative task', 'error');
-            }
-        }
-
         // Function to create collaborative todo card
         function createCollaborativeTodoElement(todo) {
             const currentUsername = document.querySelector('meta[name="current-username"]').content;
