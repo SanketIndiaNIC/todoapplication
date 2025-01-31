@@ -1253,7 +1253,7 @@
                         </div>
                         <div class="reminder-info" th:if="${todo.reminderDateTime != null}">
                             <i class="fas" th:classappend="${todo.reminderSent ? 'fa-check-circle text-success' : 'fa-clock text-primary'}"></i>
-                            <span th:if="${!todo.reminderSent}">Reminder set for: </span>
+                            <span th:if="${!todo.reminderSent} +'(' + ${todo.reminderFrequency} + ')' ">Reminder set for: </span>
                             <span th:if="${todo.reminderSent}">Reminder sent on: </span>
                             <span th:text="${#temporals.format(todo.reminderDateTime, 'dd MMM yyyy HH:mm')}">Date</span>
                         </div>
@@ -1409,7 +1409,7 @@
                 </h2>
                 <span class="close">&times;</span>
             </div>
-            <form id="editCollaborativeTaskForm" class="modal-form">
+            <form id="editCollaborativeTaskForm" class="modal-form" onSubmit="updateCollaborativeTask(event)">
                 <input type="hidden" id="editTaskId">
                 <div class="form-group">
                     <label for="editTaskTitle">Title</label>
@@ -1669,7 +1669,8 @@
                     ${todo.reminderDateTime ? `
                         <div class="reminder-info">
                             <i class="fas fa-bell"></i>
-                            <span>Reminder set for ${formatDate(todo.reminderDateTime)}</span>
+                            <span>Reminder set for ${formatDate(todo.reminderDateTime)} </span>
+                            <span>(${todo.reminderFrequency})</span>
                         </div>
                     ` : ''}
                 </div>
@@ -1810,7 +1811,8 @@
                                 <button class="action-btn edit-btn" onclick="openEditCollaborativeModal(${todo.id})" title="Edit Task">
                                     <i class="fas fa-edit"></i>
                                 </button>
-                                <button class="action-btn delete-btn" onclick="deleteCollaborativeTodo(${todo.id})" title="Delete Task">
+                                <button class="action-btn delete-btn" onclick="deleteCollaborativeTodo(this)"
+                                data-todo-id="${todo.id}" title="Delete Task">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             ` : ''}
@@ -1834,7 +1836,8 @@
                             <div class="reminder-info">
                                 <i class="fas ${todo.reminderSent ? 'fa-check-circle text-success' : 'fa-bell text-primary'}"></i>
                                 <span>${todo.reminderSent ? 'Reminder sent on: ' : 'Reminder set for: '}</span>
-                                <span>${formatDate(todo.reminderDateTime)}</span>
+                                <span>${formatDate(todo.reminderDateTime)} </span>
+                                <span>(${todo.reminderFrequency})</span>
                                 ${todo.reminderMessage ? `<div class="reminder-message"><small>Note: ${todo.reminderMessage}</small></div>` : ''}
                             </div>
                         ` : ''}
@@ -1889,7 +1892,8 @@
         }
 
         // Function to delete collaborative todo
-        async function deleteCollaborativeTodo(id) {
+        async function deleteCollaborativeTodo(button) {
+        const id = button.getAttribute('data-todo-id');
             try {
                 const response = await fetch(`/api/collaborative-todos/${id}`, {
                     method: 'DELETE',
@@ -1902,7 +1906,8 @@
                     throw new Error('Failed to delete task');
                 }
 
-                const taskCard = document.querySelector(`.todo-card[data-todo-id="${id}"]`);
+                //const taskCard = document.querySelector(`.todo-card[data-todo-id="${id}"]`);
+                const taskCard = button.closest('.todo-card')
                 taskCard.style.animation = 'fadeOut 0.3s ease';
                 setTimeout(() => {
                     taskCard.remove();
@@ -1991,6 +1996,27 @@
                     if (reminderBtn) {
                         reminderBtn.classList.add('has-reminder');
                         reminderBtn.title = 'Reminder set';
+                          const reminderInfo = todoCard.querySelector('.reminder-info');
+                    if (reminderInfo) {
+                        reminderInfo.remove();
+                    }
+
+                    const frequencyText = {
+                        'ONCE': 'once',
+                        'DAILY': 'daily',
+                        'WEEKLY': 'weekly',
+                        'MONTHLY': 'monthly',
+                        'YEARLY': 'yearly'
+                    }[data.reminderFrequency];
+
+                    const reminderHtml = `
+                        <div class="reminder-info">
+                            <i class="fas fa-clock text-primary"></i>
+                            <span>Reminder set for: ${formatDate(data.reminderDateTime)}</span>
+                             <span>(${frequencyText})</span>
+                        </div>
+                    `;
+                    todoCard.querySelector('.todo-content').insertAdjacentHTML('beforeend', reminderHtml);
                     }
                 }
             })
@@ -2341,12 +2367,12 @@
         // Function to handle collaborative task update
         async function updateCollaborativeTask(event) {
             event.preventDefault();
-            
+
             const taskId = document.getElementById('editTaskId').value;
             const title = document.getElementById('editTaskTitle').value;
             const description = document.getElementById('editTaskDescription').value;
             const collaboratorIds = $('#editCollaborators').val().map(Number);
-            
+
             try {
                 const response = await fetch(`/api/collaborative-todos/${taskId}`, {
                     method: 'PUT',
@@ -2360,16 +2386,16 @@
                         collaboratorIds
                     })
                 });
-                
+
                 if (!response.ok) throw new Error('Failed to update task');
 
                 const updatedTask = await response.json();
 
                 // Update the task card in the UI
-                const taskCard = document.querySelector(`[data-task-id="${taskId}"]`);
+                const taskCard = document.querySelector(`.todo-card[data-todo-id="${taskId}"]`);
                 if (taskCard) {
-                    taskCard.querySelector('.task-title').textContent = updatedTask.title;
-                    taskCard.querySelector('.task-description').textContent = updatedTask.description;
+                    taskCard.querySelector('.todo-title').textContent = updatedTask.title;
+                    taskCard.querySelector('.todo-description').textContent = updatedTask.description;
 
                     // Update collaborators
                     const collaboratorsContainer = taskCard.querySelector('.collaborators');
@@ -2380,7 +2406,7 @@
                         collaboratorSpan.className = 'collaborator';
                         collaboratorSpan.dataset.userId = collaborator.id;
                         collaboratorSpan.dataset.username = collaborator.username;
-                        collaboratorSpan.textContent = collaborator.username;
+                        collaboratorSpan.textContent = collaborator.username+ ' ';
                         collaboratorsContainer.appendChild(collaboratorSpan);
                     });
                 }
@@ -2401,7 +2427,7 @@
         }
         
         // Add event listener for the edit form
-        document.getElementById('editCollaborativeTaskForm').addEventListener('submit', updateCollaborativeTask);
+        //document.getElementById('editCollaborativeTaskForm').addEventListener('submit', updateCollaborativeTask);
         
         // Initialize edit modal close button
         document.querySelector('#editCollaborativeTaskModal .close').addEventListener('click', function() {
@@ -2456,6 +2482,7 @@
                 reminderDiv.innerHTML = `
                     <i class="fas fa-bell"></i>
                     <span>Reminder set for ${formatDate(updatedTodo.reminderDateTime)}</span>
+                    <span>(${updatedTodo.reminderFrequency})</span>
                 `;
                 
                 if (!todoCard.querySelector('.reminder-info')) {

@@ -62,4 +62,8 @@ public class CollaborativeTodo {
 
     @Column(name = "reminder_message")
     private String reminderMessage;
+
+    @Column(name = "reminder_frequency")
+    @Enumerated(EnumType.STRING)
+    private Todo.ReminderFrequency reminderFrequency = Todo.ReminderFrequency.ONCE;
 }

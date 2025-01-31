@@ -1,10 +1,6 @@
 package com.example.todoapp.controller;
 
-import com.example.todoapp.model.CollaborativeTodo;
-import com.example.todoapp.model.CollaborativeTodoRequest;
-import com.example.todoapp.model.CollaborativeTodoUpdateRequest;
-import com.example.todoapp.model.ErrorResponse;
-import com.example.todoapp.model.User;
+import com.example.todoapp.model.*;
 import com.example.todoapp.repository.CollaborativeTodoRepository;
 import com.example.todoapp.repository.UserRepository;
 import com.example.todoapp.service.CollaborationNotificationService;
@@ -215,12 +211,14 @@ public class CollaborativeTodoController {
         try {
             String reminderDateTime = (String) request.get("reminderDateTime");
             String reminderMessage = (String) request.get("reminderMessage");
+            String reminderFrequency = (String) request.get("reminderFrequency");
             
             CollaborativeTodo todo = collaborativeTodoRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Todo not found"));
             
             todo.setReminderDateTime(LocalDateTime.parse(reminderDateTime));
             todo.setReminderMessage(reminderMessage);
+            todo.setReminderFrequency(Todo.ReminderFrequency.valueOf(reminderFrequency));
             todo.setReminderSent(false);
             
             CollaborativeTodo updatedTodo = collaborativeTodoRepository.save(todo);
