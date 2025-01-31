@@ -1253,9 +1253,10 @@
                         </div>
                         <div class="reminder-info" th:if="${todo.reminderDateTime != null}">
                             <i class="fas" th:classappend="${todo.reminderSent ? 'fa-check-circle text-success' : 'fa-clock text-primary'}"></i>
-                            <span th:if="${!todo.reminderSent} +'(' + ${todo.reminderFrequency} + ')' ">Reminder set for: </span>
+                            <span th:if="${!todo.reminderSent}">Reminder set for: </span>
                             <span th:if="${todo.reminderSent}">Reminder sent on: </span>
                             <span th:text="${#temporals.format(todo.reminderDateTime, 'dd MMM yyyy HH:mm')}">Date</span>
+                            <p th:text="'(' + ${todo.reminderFrequency} + ')'">Frequency</p>
                         </div>
                     </div>
                 </div>
